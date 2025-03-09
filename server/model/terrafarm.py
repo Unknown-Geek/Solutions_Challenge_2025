@@ -7,51 +7,42 @@ Original file is located at
     https://colab.research.google.com/drive/1mD_aXg1p2uMWkDkvqVDTYjstUbd0hpbB
 """
 
-import numpy as np
 import pandas as pd
-import xgboost as xgb
+import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import accuracy_score, classification_report
+import xgboost as xgb
 
 # Load the data
-data = pd.read_csv("data.csv")
+data = pd.read_csv('data.csv')
 
 # Feature engineering - create an afforestation suitability score based on domain knowledge
-data["afforestation_score"] = (
-    data["Average Annual Rainfall (inches)"] * 0.3
-    + data["Soil Suitability (0 to 1)"] * 0.4
-    + data["Wildlife Benefit Potential (0 to 1)"] * 0.2
-    - (data["Population"] / 1000000) * 0.1
-)
+data['afforestation_score'] = (data['Average Annual Rainfall (inches)'] * 0.3 + data['Soil Suitability (0 to 1)'] * 0.4 + data['Wildlife Benefit Potential (0 to 1)'] * 0.2 - (data['Population'] / 1000000) * 0.1            )
 
-data["afforestation_score"] = (
-    data["afforestation_score"] - data["afforestation_score"].min()
-) / (data["afforestation_score"].max() - data["afforestation_score"].min())
-data["good_for_afforestation"] = (data["afforestation_score"] > 0.6).astype(int)
+print(data["afforestation_score"].describe())  # Before normalization
+
+# Define a reasonable raw score threshold based on domain knowledge
+raw_threshold = 10  # Adjust this based on your data
+data["good_for_afforestation"] = (data["afforestation_score"] > raw_threshold).astype(int)
 
 # Select features for modeling
-features = [
-    "Average Annual Rainfall (inches)",
-    "Soil Suitability (0 to 1)",
-    "Wildlife Benefit Potential (0 to 1)",
-    "Population",
-]
+features = ['Average Annual Rainfall (inches)', 'Soil Suitability (0 to 1)',
+           'Wildlife Benefit Potential (0 to 1)', 'Population']
 
 X = data[features]
-y = data["good_for_afforestation"]
+y = data['good_for_afforestation']
 
 # Split the data into training and testing sets
-X_train, X_test, y_train, y_test = train_test_split(
-    X, y, test_size=0.15, random_state=42
-)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.15, random_state=42)
 
 # Standardize the features
 scaler = StandardScaler()
 X_train_scaled = scaler.fit_transform(X_train)
 X_test_scaled = scaler.transform(X_test)
 
-for i in range(0, 61):
-    print(y[i])
+for i in range(0,61):
+  print(y[i])
 
 xgb_model = xgb.XGBClassifier(
     max_depth=4,
@@ -70,7 +61,6 @@ print("\nXGBoost Model Results:")
 print(f"Accuracy: {accuracy_score(y_test, xgb_predictions):.4f}")
 print("\nClassification Report:")
 print(classification_report(y_test, xgb_predictions))
-
 
 # Function to get afforestation suitability by state
 def get_afforestation_locations(state, model, features, scaler):
@@ -102,27 +92,19 @@ def get_afforestation_locations(state, model, features, scaler):
         return f"No suitable locations found for afforestation in {state}."
 
     # Return only the location names
-    return good_locations[["City", "Probability"]].sort_values(
-        by="Probability", ascending=False
-    )
-
+    return good_locations[["City", "Probability"]].sort_values(by="Probability", ascending=False)
 
 # Basic Input-Output system
 def main():
-    state_input = input(
-        "Enter the state you want to check for afforestation suitability: "
-    )
+    state_input = input("Enter the state you want to check for afforestation suitability: ")
     result = get_afforestation_locations(state_input, xgb_model, features, scaler)
 
-    if isinstance(
-        result, str
-    ):  # If the result is a message (e.g., "No data available")
+    if isinstance(result, str):  # If the result is a message (e.g., "No data available")
         print(result)
     else:
         print(f"Suitable locations for afforestation in {state_input}:")
         for index, row in result.iterrows():
             print(f"- {row['City']} (Probability: {row['Probability']:.4f})")
-
 
 def predict_afforestation_suitability(model):
     # Create a feature array for the new location
@@ -146,9 +128,11 @@ def predict_afforestation_suitability(model):
     else:
         suitability = "Not Good"
 
-    return suitability, probability * 100
-
+    return suitability, probability
 
 main()
 
 predict_afforestation_suitability(xgb_model)
+
+pip freeze > requirements.txt
+
