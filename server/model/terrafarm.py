@@ -11,31 +11,45 @@ import numpy as np
 import pandas as pd
 import xgboost as xgb
 from sklearn.metrics import accuracy_score, classification_report
-from sklearn.model_selection import train_test_split, cross_val_score, KFold, GridSearchCV
+from sklearn.model_selection import (
+    GridSearchCV,
+    KFold,
+    cross_val_score,
+    train_test_split,
+)
 from sklearn.preprocessing import StandardScaler
 
 # Load the data
-data = pd.read_csv('data.csv')
+data = pd.read_csv("data.csv")
 
 # Feature engineering - create an afforestation suitability score based on domain knowledge
-data['afforestation_score'] = (data['Average Annual Rainfall (inches)'] * 0.3 + data['Soil Suitability (0 to 1)'] * 0.4 + data['Wildlife Benefit Potential (0 to 1)'] * 0.2 - (data['Population'] / 100000) * 0.1            )
+data["afforestation_score"] = (
+    data["Average Annual Rainfall (inches)"] * 0.3
+    + data["Soil Suitability (0 to 1)"] * 0.4
+    + data["Wildlife Benefit Potential (0 to 1)"] * 0.2
+    - (data["Population"] / 100000) * 0.1
+)
 
 print(data["afforestation_score"].describe())  # Before normalization
 
 # Define a reasonable raw score threshold based on domain knowledge
 raw_threshold = 11  # Adjust this based on your data
-data["good_for_afforestation"] = (data["afforestation_score"] > raw_threshold).astype(int)
+data["good_for_afforestation"] = (data["afforestation_score"] > raw_threshold).astype(
+    int
+)
 
 # Select features for modeling
-features = ['Average Annual Rainfall (inches)', 'Soil Suitability (0 to 1)',
-           'Wildlife Benefit Potential (0 to 1)', 'Population']
+features = [
+    "Average Annual Rainfall (inches)",
+    "Soil Suitability (0 to 1)",
+    "Wildlife Benefit Potential (0 to 1)",
+    "Population",
+]
 
 X = data[features]
-y = data['good_for_afforestation']
+y = data["good_for_afforestation"]
 
-X_temp, X_test, y_temp, y_test = train_test_split(
-    X, y, test_size=0.20, random_state=42
-)
+X_temp, X_test, y_temp, y_test = train_test_split(X, y, test_size=0.20, random_state=42)
 X_train, X_val, y_train, y_val = train_test_split(
     X_temp, y_temp, test_size=0.15, random_state=42
 )
@@ -49,34 +63,29 @@ X_test_scaled = scaler.transform(X_test)
 # Set up cross-validation
 kfold = KFold(n_splits=5, shuffle=True, random_state=42)
 
-for i in range(0,61):
-  print(y[i])
+for i in range(0, 61):
+    print(y[i])
 
 # Define base XGBoost model
-base_model = xgb.XGBClassifier(
-    objective="binary:logistic",
-    random_state=42
-)
+base_model = xgb.XGBClassifier(objective="binary:logistic", random_state=42)
 
 # Perform cross-validation
-cv_scores = cross_val_score(base_model, X_train_scaled, y_train, cv=kfold, scoring='accuracy')
+cv_scores = cross_val_score(
+    base_model, X_train_scaled, y_train, cv=kfold, scoring="accuracy"
+)
 print("\nCross-validation scores:", cv_scores)
 print(f"Mean CV accuracy: {cv_scores.mean():.4f}")
 print(f"CV standard deviation: {cv_scores.std():.4f}")
 
 param_grid = {
-    'max_depth': [3, 4, 5],
-    'learning_rate': [0.05, 0.1, 0.2],
-    'n_estimators': [50, 100, 150],
-    'subsample': [0.8, 0.9, 1.0]
+    "max_depth": [3, 4, 5],
+    "learning_rate": [0.05, 0.1, 0.2],
+    "n_estimators": [50, 100, 150],
+    "subsample": [0.8, 0.9, 1.0],
 }
 
 grid_search = GridSearchCV(
-    estimator=base_model,
-    param_grid=param_grid,
-    cv=kfold,
-    scoring='accuracy',
-    verbose=1
+    estimator=base_model, param_grid=param_grid, cv=kfold, scoring="accuracy", verbose=1
 )
 
 grid_search.fit(X_train_scaled, y_train)
@@ -103,6 +112,7 @@ print("\nTest Set Results:")
 print(f"Accuracy: {accuracy_score(y_test, test_predictions):.4f}")
 print("\nTest Classification Report:")
 print(classification_report(y_test, test_predictions))
+
 
 # Function to get afforestation suitability by state
 def get_afforestation_locations(state, model, features, scaler):
@@ -134,19 +144,27 @@ def get_afforestation_locations(state, model, features, scaler):
         return f"No suitable locations found for afforestation in {state}."
 
     # Return only the location names
-    return good_locations[["City", "Probability"]].sort_values(by="Probability", ascending=False)
+    return good_locations[["City", "Probability"]].sort_values(
+        by="Probability", ascending=False
+    )
+
 
 # Basic Input-Output system
 def main():
-    state_input = input("Enter the state you want to check for afforestation suitability: ")
-    result = get_afforestation_locations(state_input, xgb_model, features, scaler)
+    state_input = input(
+        "Enter the state you want to check for afforestation suitability: "
+    )
+    result = get_afforestation_locations(state_input, best_model, features, scaler)
 
-    if isinstance(result, str):  # If the result is a message (e.g., "No data available")
+    if isinstance(
+        result, str
+    ):  # If the result is a message (e.g., "No data available")
         print(result)
     else:
         print(f"Suitable locations for afforestation in {state_input}:")
         for index, row in result.iterrows():
             print(f"- {row['City']} (Probability: {row['Probability']:.4f})")
+
 
 def predict_afforestation_suitability(model):
     # Create a feature array for the new location
@@ -172,7 +190,7 @@ def predict_afforestation_suitability(model):
 
     return suitability, probability
 
+
 main()
 
-predict_afforestation_suitability(xgb_model)
-
+predict_afforestation_suitability(best_model)
