@@ -40,9 +40,9 @@ raw_threshold = 0.5 # Adjust this based on your data
 data["good_for_afforestation"] = (data["afforestation_score"] > raw_threshold).astype(int)
 
 # Select features for modeling
-features = ['Normalized Rainfall', 'Soil Suitability (0 to 1)',
-           'Wildlife Benefit Potential (0 to 1)', 'Normalized Population',
-            'Normalized Area','Lack of tree cover']
+features = ['Average Annual Rainfall (inches)', 'Soil Suitability (0 to 1)',
+           'Wildlife Benefit Potential (0 to 1)', 'Population',
+            'Area available for afforestation (acres)','Lack of tree cover']
 
 X = data[features]
 y = data['good_for_afforestation']
