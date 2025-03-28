@@ -1,0 +1,3 @@
+[submodule "server/TerraForm_AI"]
+	path = server/TerraForm_AI
+	url = https://huggingface.co/spaces/Mojo-Maniac/TerraForm_AI
