@@ -234,7 +234,7 @@ export default function MapDashboard() {
         <Card className="overflow-hidden">
           <div className="h-[600px] bg-gray-200 relative">
             <img
-              src="/placeholder.svg?height=600&width=1000"
+              src="/map_placeholder.png"
               alt="Interactive map visualization"
               className="w-full h-full object-cover"
             />
