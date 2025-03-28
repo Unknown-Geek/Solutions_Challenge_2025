@@ -71,6 +71,7 @@ export default function MapDashboard() {
 
   const handleSiteSelect = (siteId: string) => {
     setSelectedSite(siteId === selectedSite ? null : siteId);
+    if (selectedLayer) return;
   };
 
   return (
