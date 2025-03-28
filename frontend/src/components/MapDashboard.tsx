@@ -5,7 +5,18 @@ import { Slider } from "./ui/slider";
 import { Switch } from "./ui/switch";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
-import { Layers, Filter, MapPin, Thermometer, Droplets, Mountain, Leaf, Info, Download, ChevronDown } from 'lucide-react';
+import {
+  Layers,
+  Filter,
+  MapPin,
+  Thermometer,
+  Droplets,
+  Mountain,
+  Leaf,
+  Info,
+  Download,
+  ChevronDown,
+} from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -21,16 +32,41 @@ import {
 } from "./ui/dropdown-menu";
 
 export default function MapDashboard() {
-  const [activeLayer, setActiveLayer] = useState("suitability");
+  const [selectedLayer, setActiveLayer] = useState("suitability");
   const [selectedSite, setSelectedSite] = useState<string | null>(null);
 
   // Mock data for demonstration
   const topSites = [
-    { id: "site1", name: "Amazon Basin, Brazil", score: 92, area: "15,000 hectares" },
-    { id: "site2", name: "Congo Rainforest, DRC", score: 89, area: "12,500 hectares" },
-    { id: "site3", name: "Borneo Highlands, Indonesia", score: 87, area: "9,800 hectares" },
-    { id: "site4", name: "Western Ghats, India", score: 85, area: "7,200 hectares" },
-    { id: "site5", name: "Sierra Nevada, USA", score: 82, area: "5,600 hectares" },
+    {
+      id: "site1",
+      name: "Amazon Basin, Brazil",
+      score: 92,
+      area: "15,000 hectares",
+    },
+    {
+      id: "site2",
+      name: "Congo Rainforest, DRC",
+      score: 89,
+      area: "12,500 hectares",
+    },
+    {
+      id: "site3",
+      name: "Borneo Highlands, Indonesia",
+      score: 87,
+      area: "9,800 hectares",
+    },
+    {
+      id: "site4",
+      name: "Western Ghats, India",
+      score: 85,
+      area: "7,200 hectares",
+    },
+    {
+      id: "site5",
+      name: "Sierra Nevada, USA",
+      score: 82,
+      area: "5,600 hectares",
+    },
   ];
 
   const handleSiteSelect = (siteId: string) => {
@@ -54,7 +90,7 @@ export default function MapDashboard() {
                 <TabsTrigger value="suitability">Suitability</TabsTrigger>
                 <TabsTrigger value="environmental">Environmental</TabsTrigger>
               </TabsList>
-              
+
               <TabsContent value="suitability" className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center">
@@ -85,7 +121,7 @@ export default function MapDashboard() {
                   <Switch />
                 </div>
               </TabsContent>
-              
+
               <TabsContent value="environmental" className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center">
@@ -147,7 +183,9 @@ export default function MapDashboard() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">Minimum Area (hectares)</label>
+              <label className="text-sm font-medium">
+                Minimum Area (hectares)
+              </label>
               <Slider defaultValue={[1000]} max={50000} step={500} />
               <div className="flex justify-between text-xs text-gray-500">
                 <span>0</span>
@@ -157,7 +195,9 @@ export default function MapDashboard() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">Minimum Suitability Score</label>
+              <label className="text-sm font-medium">
+                Minimum Suitability Score
+              </label>
               <Slider defaultValue={[70]} max={100} step={5} />
               <div className="flex justify-between text-xs text-gray-500">
                 <span>0</span>
@@ -192,25 +232,59 @@ export default function MapDashboard() {
       <div className="lg:col-span-3 space-y-6">
         <Card className="overflow-hidden">
           <div className="h-[600px] bg-gray-200 relative">
-            <img 
-              src="/placeholder.svg?height=600&width=1000" 
-              alt="Interactive map visualization" 
+            <img
+              src="/placeholder.svg?height=600&width=1000"
+              alt="Interactive map visualization"
               className="w-full h-full object-cover"
             />
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="bg-white/90 px-6 py-4 rounded-lg shadow-lg">
-                <p className="font-medium text-emerald-700">Interactive Map Visualization</p>
-                <p className="text-sm text-gray-600">This would be an interactive map with the selected layers and filters applied</p>
+                <p className="font-medium text-emerald-700">
+                  Interactive Map Visualization
+                </p>
+                <p className="text-sm text-gray-600">
+                  This would be an interactive map with the selected layers and
+                  filters applied
+                </p>
               </div>
             </div>
 
             {/* Map Controls */}
             <div className="absolute top-4 right-4 bg-white rounded-lg shadow-md p-2 flex flex-col gap-2">
               <Button size="icon" variant="ghost" className="h-8 w-8">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4"><path d="M21 12a9 9 0 0 0-9-9 9 9 0 0 0-9 9 9 9 0 0 0 9 9 9 9 0 0 0 9-9Z"/><path d="M9 12h6"/><path d="M12 9v6"/></svg>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="h-4 w-4"
+                >
+                  <path d="M21 12a9 9 0 0 0-9-9 9 9 0 0 0-9 9 9 9 0 0 0 9 9 9 9 0 0 0 9-9Z" />
+                  <path d="M9 12h6" />
+                  <path d="M12 9v6" />
+                </svg>
               </Button>
               <Button size="icon" variant="ghost" className="h-8 w-8">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4"><path d="M21 12a9 9 0 0 0-9-9 9 9 0 0 0-9 9 9 9 0 0 0 9 9 9 9 0 0 0 9-9Z"/><path d="M9 12h6"/></svg>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="h-4 w-4"
+                >
+                  <path d="M21 12a9 9 0 0 0-9-9 9 9 0 0 0-9 9 9 9 0 0 0 9 9 9 9 0 0 0 9-9Z" />
+                  <path d="M9 12h6" />
+                </svg>
               </Button>
             </div>
 
@@ -269,26 +343,35 @@ export default function MapDashboard() {
           <CardContent>
             <div className="space-y-4">
               {topSites.map((site) => (
-                <div 
+                <div
                   key={site.id}
-                  className={`p-4 rounded-lg border ${selectedSite === site.id ? 'border-emerald-500 bg-emerald-50' : 'border-gray-200'} cursor-pointer`}
+                  className={`p-4 rounded-lg border ${
+                    selectedSite === site.id
+                      ? "border-emerald-500 bg-emerald-50"
+                      : "border-gray-200"
+                  } cursor-pointer`}
                   onClick={() => handleSiteSelect(site.id)}
                 >
                   <div className="flex items-start justify-between">
                     <div>
                       <h3 className="font-medium">{site.name}</h3>
                       <div className="flex items-center mt-1 space-x-3">
-                        <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200">
+                        <Badge
+                          variant="outline"
+                          className="bg-emerald-50 text-emerald-700 border-emerald-200"
+                        >
                           Score: {site.score}/100
                         </Badge>
-                        <span className="text-sm text-gray-500">{site.area}</span>
+                        <span className="text-sm text-gray-500">
+                          {site.area}
+                        </span>
                       </div>
                     </div>
                     <Button size="icon" variant="ghost" className="h-8 w-8">
                       <Info className="h-4 w-4" />
                     </Button>
                   </div>
-                  
+
                   {selectedSite === site.id && (
                     <div className="mt-4 pt-4 border-t border-gray-200">
                       <h4 className="text-sm font-medium mb-2">Site Details</h4>
@@ -310,7 +393,9 @@ export default function MapDashboard() {
                           <p>Very High</p>
                         </div>
                       </div>
-                      <Button size="sm" className="mt-3 w-full">View Detailed Report</Button>
+                      <Button size="sm" className="mt-3 w-full">
+                        View Detailed Report
+                      </Button>
                     </div>
                   )}
                 </div>
