@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { Slider } from "./ui/slider";
@@ -30,48 +30,117 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
+import terraformAPI from "../services/api";
+import { Location } from "../types/api";
+import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import "leaflet/dist/leaflet.css";
+import L from "leaflet";
+
+// Fix for default marker icons in react-leaflet
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl:
+    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png",
+  iconUrl:
+    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png",
+  shadowUrl:
+    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
+});
 
 export default function MapDashboard() {
-  const [selectedLayer, setActiveLayer] = useState("suitability");
+  const [activeLayer, setActiveLayer] = useState("suitability");
   const [selectedSite, setSelectedSite] = useState<string | null>(null);
+  const [states, setStates] = useState<string[]>([]);
+  const [selectedState, setSelectedState] = useState<string>("");
+  const [locations, setLocations] = useState<Location[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [mapCenter, setMapCenter] = useState<[number, number]>([20, 0]);
+  const [mapZoom, setMapZoom] = useState(2);
 
-  // Mock data for demonstration
-  const topSites = [
-    {
-      id: "site1",
-      name: "Amazon Basin, Brazil",
-      score: 92,
-      area: "15,000 hectares",
-    },
-    {
-      id: "site2",
-      name: "Congo Rainforest, DRC",
-      score: 89,
-      area: "12,500 hectares",
-    },
-    {
-      id: "site3",
-      name: "Borneo Highlands, Indonesia",
-      score: 87,
-      area: "9,800 hectares",
-    },
-    {
-      id: "site4",
-      name: "Western Ghats, India",
-      score: 85,
-      area: "7,200 hectares",
-    },
-    {
-      id: "site5",
-      name: "Sierra Nevada, USA",
-      score: 82,
-      area: "5,600 hectares",
-    },
-  ];
+  useEffect(() => {
+    loadStates();
+  }, []);
 
-  const handleSiteSelect = (siteId: string) => {
+  useEffect(() => {
+    if (selectedState) {
+      loadLocations(selectedState);
+    }
+  }, [selectedState]);
+
+  const loadStates = async () => {
+    try {
+      const statesData = await terraformAPI.getStates();
+      setStates(statesData);
+    } catch (error) {
+      console.error("Failed to load states:", error);
+    }
+  };
+
+  const loadLocations = async (state: string) => {
+    setLoading(true);
+    try {
+      const locationsData = await terraformAPI.getLocations(state);
+      setLocations(locationsData);
+    } catch (error) {
+      console.error("Failed to load locations:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Transform locations into top sites format
+  const topSites = locations.map((location) => ({
+    id: location.id.toString(),
+    name: `${location.name}, ${location.state}`,
+    score: Math.round(Math.random() * 20 + 80), // Temporary random score for demonstration
+    area: `${Math.round(Math.random() * 15000 + 5000)} hectares`, // Temporary random area
+    coordinates: {
+      lat: location.latitude,
+      lng: location.longitude,
+    },
+  }));
+
+  const getMarkerColor = (score: number): string => {
+    if (score >= 90) return "emerald";
+    if (score >= 80) return "yellow";
+    if (score >= 70) return "orange";
+    return "red";
+  };
+
+  // Update marker styles based on active layer and score
+  const getMarkerIcon = (score: number) => {
+    const color = getMarkerColor(score);
+    return L.divIcon({
+      className: `bg-${color}-500 w-6 h-6 rounded-full border-2 border-white shadow-lg`,
+      iconSize: [24, 24],
+    });
+  };
+
+  const handleSiteSelect = async (siteId: string) => {
     setSelectedSite(siteId === selectedSite ? null : siteId);
-    if (selectedLayer) return;
+
+    const site = topSites.find((s) => s.id === siteId);
+    if (site) {
+      setMapCenter([site.coordinates.lat, site.coordinates.lng]);
+      setMapZoom(12);
+
+      try {
+        const prediction = await terraformAPI.getPrediction({
+          latitude: site.coordinates.lat,
+          longitude: site.coordinates.lng,
+        });
+        // You can use the prediction data to update the site details
+        console.log("Prediction for site:", prediction);
+      } catch (error) {
+        console.error("Failed to get prediction:", error);
+      }
+    }
+  };
+
+  // Update the layer state and potentially trigger map updates
+  const handleLayerChange = (layer: string) => {
+    setActiveLayer(layer);
+    // Here you could update map visualization based on the selected layer
   };
 
   return (
@@ -86,7 +155,7 @@ export default function MapDashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <Tabs defaultValue="suitability" onValueChange={setActiveLayer}>
+            <Tabs defaultValue="suitability" onValueChange={handleLayerChange}>
               <TabsList className="grid grid-cols-2 mb-4">
                 <TabsTrigger value="suitability">Suitability</TabsTrigger>
                 <TabsTrigger value="environmental">Environmental</TabsTrigger>
@@ -166,6 +235,22 @@ export default function MapDashboard() {
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="space-y-2">
+              <label className="text-sm font-medium">State</label>
+              <Select value={selectedState} onValueChange={setSelectedState}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select state" />
+                </SelectTrigger>
+                <SelectContent>
+                  {states.map((state) => (
+                    <SelectItem key={state} value={state}>
+                      {state}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
               <label className="text-sm font-medium">Region</label>
               <Select defaultValue="global">
                 <SelectTrigger>
@@ -232,82 +317,62 @@ export default function MapDashboard() {
       {/* Main Map Area */}
       <div className="lg:col-span-3 space-y-6">
         <Card className="overflow-hidden">
-          <div className="h-[600px] bg-gray-200 relative">
-            <img
-              src="/placeholder.svg?height=600&width=1000"
-              alt="Interactive map visualization"
-              className="w-full h-full object-cover"
-            />
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="bg-white/90 px-6 py-4 rounded-lg shadow-lg">
-                <p className="font-medium text-emerald-700">
-                  Interactive Map Visualization
-                </p>
-                <p className="text-sm text-gray-600">
-                  This would be an interactive map with the selected layers and
-                  filters applied
-                </p>
-              </div>
-            </div>
-
-            {/* Map Controls */}
-            <div className="absolute top-4 right-4 bg-white rounded-lg shadow-md p-2 flex flex-col gap-2">
-              <Button size="icon" variant="ghost" className="h-8 w-8">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="24"
-                  height="24"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="h-4 w-4"
+          <div className="h-[600px] relative">
+            <MapContainer
+              center={mapCenter}
+              zoom={mapZoom}
+              style={{ height: "100%", width: "100%" }}
+            >
+              <TileLayer
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              />
+              {topSites.map((site) => (
+                <Marker
+                  key={site.id}
+                  position={[site.coordinates.lat, site.coordinates.lng]}
+                  icon={getMarkerIcon(site.score)}
+                  eventHandlers={{
+                    click: () => handleSiteSelect(site.id),
+                  }}
                 >
-                  <path d="M21 12a9 9 0 0 0-9-9 9 9 0 0 0-9 9 9 9 0 0 0 9 9 9 9 0 0 0 9-9Z" />
-                  <path d="M9 12h6" />
-                  <path d="M12 9v6" />
-                </svg>
-              </Button>
-              <Button size="icon" variant="ghost" className="h-8 w-8">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="24"
-                  height="24"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="h-4 w-4"
-                >
-                  <path d="M21 12a9 9 0 0 0-9-9 9 9 0 0 0-9 9 9 9 0 0 0 9 9 9 9 0 0 0 9-9Z" />
-                  <path d="M9 12h6" />
-                </svg>
-              </Button>
-            </div>
+                  <Popup>
+                    <div className="p-2">
+                      <h3 className="font-medium">{site.name}</h3>
+                      <p className="text-sm text-gray-600">
+                        Score: {site.score}/100
+                      </p>
+                      <p className="text-sm text-gray-600">Area: {site.area}</p>
+                    </div>
+                  </Popup>
+                </Marker>
+              ))}
+              {/* Layer controls based on activeLayer state */}
+              {activeLayer === "environmental" && (
+                // Add environmental layer overlays here when data is available
+                <></>
+              )}
+            </MapContainer>
 
             {/* Legend */}
-            <div className="absolute bottom-4 left-4 bg-white rounded-lg shadow-md p-3">
+            <div className="absolute bottom-4 left-4 bg-white rounded-lg shadow-md p-3 z-[1000]">
               <h4 className="text-sm font-medium mb-2">Legend</h4>
               <div className="space-y-1.5">
                 <div className="flex items-center">
                   <div className="w-3 h-3 rounded-full bg-emerald-500 mr-2"></div>
-                  <span className="text-xs">High Suitability</span>
+                  <span className="text-xs">High Suitability (90-100)</span>
                 </div>
                 <div className="flex items-center">
                   <div className="w-3 h-3 rounded-full bg-yellow-500 mr-2"></div>
-                  <span className="text-xs">Medium Suitability</span>
+                  <span className="text-xs">Medium Suitability (80-89)</span>
+                </div>
+                <div className="flex items-center">
+                  <div className="w-3 h-3 rounded-full bg-orange-500 mr-2"></div>
+                  <span className="text-xs">Low Suitability (70-79)</span>
                 </div>
                 <div className="flex items-center">
                   <div className="w-3 h-3 rounded-full bg-red-500 mr-2"></div>
-                  <span className="text-xs">Low Suitability</span>
-                </div>
-                <div className="flex items-center">
-                  <div className="w-3 h-3 rounded-full bg-gray-300 mr-2"></div>
-                  <span className="text-xs">Not Suitable</span>
+                  <span className="text-xs">Not Suitable (Less than 70)</span>
                 </div>
               </div>
             </div>
@@ -320,7 +385,10 @@ export default function MapDashboard() {
             <CardTitle className="flex items-center justify-between">
               <div className="flex items-center">
                 <MapPin className="h-5 w-5 mr-2" />
-                Top Reforestation Sites
+                Available Reforestation Sites
+                {loading && (
+                  <span className="ml-2 text-sm text-gray-500">Loading...</span>
+                )}
               </div>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>

@@ -1,8 +1,25 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
+import { useEffect, useState } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "./ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { Button } from "./ui/button";
 import { BarChart, LineChart, PieChart } from "./ui/chart";
-import { BarChart2, LineChartIcon, PieChartIcon, Download, RefreshCw, ArrowUpRight, ArrowDownRight, Thermometer, Droplets } from 'lucide-react';
+import {
+  BarChart2,
+  LineChartIcon,
+  PieChartIcon,
+  Download,
+  RefreshCw,
+  ArrowUpRight,
+  ArrowDownRight,
+  Thermometer,
+  Droplets,
+} from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -10,11 +27,82 @@ import {
   SelectTrigger,
   SelectValue,
 } from "./ui/select";
+import terraformAPI from "../services/api";
+import { Location, PredictionResponse } from "../types/api";
 
 export default function DataAnalysisDashboard() {
+  const [states, setStates] = useState<string[]>([]);
+  const [selectedState, setSelectedState] = useState<string>("");
+  const [locations, setLocations] = useState<Location[]>([]);
+  const [selectedLocation, setSelectedLocation] = useState<Location | null>(
+    null
+  );
+  const [predictionResult, setPredictionResult] =
+    useState<PredictionResponse | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    loadStates();
+  }, []);
+
+  useEffect(() => {
+    if (selectedState) {
+      loadLocations(selectedState);
+    }
+  }, [selectedState]);
+
+  const loadStates = async () => {
+    try {
+      const statesData = await terraformAPI.getStates();
+      setStates(statesData);
+    } catch (error) {
+      console.error("Failed to load states:", error);
+    }
+  };
+
+  const loadLocations = async (state: string) => {
+    try {
+      const locationsData = await terraformAPI.getLocations(state);
+      setLocations(locationsData);
+    } catch (error) {
+      console.error("Failed to load locations:", error);
+    }
+  };
+
+  const handlePredict = async () => {
+    if (!selectedLocation) return;
+
+    setLoading(true);
+    try {
+      const result = await terraformAPI.getPrediction({
+        latitude: selectedLocation.latitude,
+        longitude: selectedLocation.longitude,
+        // Add any other required prediction parameters
+      });
+      setPredictionResult(result);
+    } catch (error) {
+      console.error("Prediction failed:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Mock data for charts
   const climateData = {
-    labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
+    labels: [
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec",
+    ],
     datasets: [
       {
         label: "Temperature (°C)",
@@ -34,7 +122,13 @@ export default function DataAnalysisDashboard() {
   };
 
   const suitabilityData = {
-    labels: ["Amazon Basin", "Congo Rainforest", "Borneo Highlands", "Western Ghats", "Sierra Nevada"],
+    labels: [
+      "Amazon Basin",
+      "Congo Rainforest",
+      "Borneo Highlands",
+      "Western Ghats",
+      "Sierra Nevada",
+    ],
     datasets: [
       {
         label: "Overall Suitability Score",
@@ -45,7 +139,13 @@ export default function DataAnalysisDashboard() {
   };
 
   const impactData = {
-    labels: ["Carbon Sequestration", "Biodiversity", "Water Conservation", "Soil Health", "Climate Resilience"],
+    labels: [
+      "Carbon Sequestration",
+      "Biodiversity",
+      "Water Conservation",
+      "Soil Health",
+      "Climate Resilience",
+    ],
     datasets: [
       {
         label: "Impact Score",
@@ -71,6 +171,98 @@ export default function DataAnalysisDashboard() {
 
   return (
     <div className="space-y-6">
+      {/* AI Prediction Controls */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle>AI Reforestation Analysis</CardTitle>
+          <CardDescription>
+            Get AI-powered predictions for reforestation potential at specific
+            locations
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Select
+                value={selectedState}
+                onValueChange={(value) => {
+                  setSelectedState(value);
+                  setSelectedLocation(null);
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select state" />
+                </SelectTrigger>
+                <SelectContent>
+                  {states.map((state) => (
+                    <SelectItem key={state} value={state}>
+                      {state}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select
+                value={selectedLocation?.id.toString()}
+                onValueChange={(value) => {
+                  const location = locations.find(
+                    (loc) => loc.id.toString() === value
+                  );
+                  setSelectedLocation(location || null);
+                }}
+                disabled={!selectedState}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select location" />
+                </SelectTrigger>
+                <SelectContent>
+                  {locations.map((location) => (
+                    <SelectItem
+                      key={location.id}
+                      value={location.id.toString()}
+                    >
+                      {location.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <Button
+              onClick={handlePredict}
+              disabled={!selectedLocation || loading}
+              className="w-full md:w-auto"
+            >
+              {loading ? "Analyzing..." : "Analyze Location"}
+            </Button>
+
+            {predictionResult && (
+              <div className="mt-4 p-4 bg-green-50 rounded-lg">
+                <h4 className="font-medium text-green-800 mb-2">
+                  Analysis Results
+                </h4>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-gray-600">
+                      Reforestation Potential
+                    </p>
+                    <p className="text-lg font-medium text-green-700">
+                      {(predictionResult.prediction * 100).toFixed(1)}%
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Confidence Score</p>
+                    <p className="text-lg font-medium text-green-700">
+                      {(predictionResult.probability * 100).toFixed(1)}%
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Controls */}
       <div className="flex flex-col sm:flex-row gap-4 justify-between">
         <div className="flex flex-col sm:flex-row gap-4">
@@ -87,7 +279,7 @@ export default function DataAnalysisDashboard() {
               <SelectItem value="sierra">Sierra Nevada</SelectItem>
             </SelectContent>
           </Select>
-          
+
           <Select defaultValue="2023">
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Select year" />
@@ -101,7 +293,7 @@ export default function DataAnalysisDashboard() {
             </SelectContent>
           </Select>
         </div>
-        
+
         <div className="flex gap-2">
           <Button variant="outline" size="icon">
             <RefreshCw className="h-4 w-4" />
@@ -125,10 +317,12 @@ export default function DataAnalysisDashboard() {
               <ArrowUpRight className="h-4 w-4 mr-1" />
               <span>12% increase</span>
             </div>
-            <p className="text-xs text-gray-500 mt-1">Compared to previous year</p>
+            <p className="text-xs text-gray-500 mt-1">
+              Compared to previous year
+            </p>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>Average Suitability Score</CardDescription>
@@ -139,10 +333,12 @@ export default function DataAnalysisDashboard() {
               <ArrowUpRight className="h-4 w-4 mr-1" />
               <span>5% increase</span>
             </div>
-            <p className="text-xs text-gray-500 mt-1">Compared to previous year</p>
+            <p className="text-xs text-gray-500 mt-1">
+              Compared to previous year
+            </p>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>Potential Carbon Sequestration</CardDescription>
@@ -153,10 +349,12 @@ export default function DataAnalysisDashboard() {
               <ArrowUpRight className="h-4 w-4 mr-1" />
               <span>8% increase</span>
             </div>
-            <p className="text-xs text-gray-500 mt-1">Compared to previous year</p>
+            <p className="text-xs text-gray-500 mt-1">
+              Compared to previous year
+            </p>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="pb-2">
             <CardDescription>Biodiversity Impact Score</CardDescription>
@@ -167,7 +365,9 @@ export default function DataAnalysisDashboard() {
               <ArrowDownRight className="h-4 w-4 mr-1" />
               <span>2% decrease</span>
             </div>
-            <p className="text-xs text-gray-500 mt-1">Compared to previous year</p>
+            <p className="text-xs text-gray-500 mt-1">
+              Compared to previous year
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -188,7 +388,7 @@ export default function DataAnalysisDashboard() {
             Impact
           </TabsTrigger>
         </TabsList>
-        
+
         <TabsContent value="climate">
           <Card>
             <CardHeader>
@@ -223,7 +423,7 @@ export default function DataAnalysisDashboard() {
             </CardContent>
           </Card>
         </TabsContent>
-        
+
         <TabsContent value="suitability">
           <Card>
             <CardHeader>
@@ -249,7 +449,7 @@ export default function DataAnalysisDashboard() {
             </CardContent>
           </Card>
         </TabsContent>
-        
+
         <TabsContent value="impact">
           <Card>
             <CardHeader>
@@ -290,53 +490,68 @@ export default function DataAnalysisDashboard() {
                   <span className="text-sm font-medium">92%</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2.5">
-                  <div className="bg-emerald-600 h-2.5 rounded-full" style={{ width: "92%" }}></div>
+                  <div
+                    className="bg-emerald-600 h-2.5 rounded-full"
+                    style={{ width: "92%" }}
+                  ></div>
                 </div>
               </div>
-              
+
               <div>
                 <div className="flex justify-between mb-1">
                   <span className="text-sm font-medium">Sandy Soil</span>
                   <span className="text-sm font-medium">78%</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2.5">
-                  <div className="bg-emerald-600 h-2.5 rounded-full" style={{ width: "78%" }}></div>
+                  <div
+                    className="bg-emerald-600 h-2.5 rounded-full"
+                    style={{ width: "78%" }}
+                  ></div>
                 </div>
               </div>
-              
+
               <div>
                 <div className="flex justify-between mb-1">
                   <span className="text-sm font-medium">Clay Soil</span>
                   <span className="text-sm font-medium">65%</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2.5">
-                  <div className="bg-emerald-600 h-2.5 rounded-full" style={{ width: "65%" }}></div>
+                  <div
+                    className="bg-emerald-600 h-2.5 rounded-full"
+                    style={{ width: "65%" }}
+                  ></div>
                 </div>
               </div>
-              
+
               <div>
                 <div className="flex justify-between mb-1">
                   <span className="text-sm font-medium">Chalky Soil</span>
                   <span className="text-sm font-medium">45%</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2.5">
-                  <div className="bg-emerald-600 h-2.5 rounded-full" style={{ width: "45%" }}></div>
+                  <div
+                    className="bg-emerald-600 h-2.5 rounded-full"
+                    style={{ width: "45%" }}
+                  ></div>
                 </div>
               </div>
-              
+
               <div>
                 <div className="flex justify-between mb-1">
                   <span className="text-sm font-medium">Peaty Soil</span>
                   <span className="text-sm font-medium">58%</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2.5">
-                  <div className="bg-emerald-600 h-2.5 rounded-full" style={{ width: "58%" }}></div>
+                  <div
+                    className="bg-emerald-600 h-2.5 rounded-full"
+                    style={{ width: "58%" }}
+                  ></div>
                 </div>
               </div>
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader>
             <CardTitle>Species Recommendation</CardTitle>
@@ -351,38 +566,56 @@ export default function DataAnalysisDashboard() {
                   <span className="text-emerald-700 font-medium">1</span>
                 </div>
                 <div>
-                  <h4 className="font-medium">Mahogany (Swietenia macrophylla)</h4>
-                  <p className="text-sm text-gray-500">Native hardwood with excellent carbon sequestration properties</p>
+                  <h4 className="font-medium">
+                    Mahogany (Swietenia macrophylla)
+                  </h4>
+                  <p className="text-sm text-gray-500">
+                    Native hardwood with excellent carbon sequestration
+                    properties
+                  </p>
                 </div>
               </div>
-              
+
               <div className="flex items-start">
                 <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center mr-3 mt-1">
                   <span className="text-emerald-700 font-medium">2</span>
                 </div>
                 <div>
-                  <h4 className="font-medium">Brazil Nut (Bertholletia excelsa)</h4>
-                  <p className="text-sm text-gray-500">Provides habitat for wildlife and sustainable income for communities</p>
+                  <h4 className="font-medium">
+                    Brazil Nut (Bertholletia excelsa)
+                  </h4>
+                  <p className="text-sm text-gray-500">
+                    Provides habitat for wildlife and sustainable income for
+                    communities
+                  </p>
                 </div>
               </div>
-              
+
               <div className="flex items-start">
                 <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center mr-3 mt-1">
                   <span className="text-emerald-700 font-medium">3</span>
                 </div>
                 <div>
                   <h4 className="font-medium">Kapok Tree (Ceiba pentandra)</h4>
-                  <p className="text-sm text-gray-500">Fast-growing with extensive root systems for soil stabilization</p>
+                  <p className="text-sm text-gray-500">
+                    Fast-growing with extensive root systems for soil
+                    stabilization
+                  </p>
                 </div>
               </div>
-              
+
               <div className="flex items-start">
                 <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center mr-3 mt-1">
                   <span className="text-emerald-700 font-medium">4</span>
                 </div>
                 <div>
-                  <h4 className="font-medium">Rubber Tree (Hevea brasiliensis)</h4>
-                  <p className="text-sm text-gray-500">Economically valuable and adaptable to various soil conditions</p>
+                  <h4 className="font-medium">
+                    Rubber Tree (Hevea brasiliensis)
+                  </h4>
+                  <p className="text-sm text-gray-500">
+                    Economically valuable and adaptable to various soil
+                    conditions
+                  </p>
                 </div>
               </div>
             </div>
