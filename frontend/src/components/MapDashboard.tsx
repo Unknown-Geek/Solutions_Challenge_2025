@@ -30,8 +30,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
-import terraformAPI from "../services/api";
-import { Location } from "../types/api";
+import terraformAPI, { Location } from "../services/api"; // Import Location type from services/api.ts
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 import L from "leaflet";
@@ -66,6 +65,7 @@ function MapViewControl({
 }
 
 export default function MapDashboard() {
+  const navigate = useNavigate();
   const [activeLayer, setActiveLayer] = useState("suitability");
   const [selectedSite, setSelectedSite] = useState<string | null>(null);
   const [states, setStates] = useState<string[]>([]);
@@ -74,7 +74,12 @@ export default function MapDashboard() {
   const [loading, setLoading] = useState(false);
   const [mapCenter, setMapCenter] = useState<[number, number]>([20, 0]);
   const [mapZoom, setMapZoom] = useState(2);
-  const [apiErrors, setApiErrors] = useState<{ [key: string]: string }>({});
+  const [apiErrors, setApiErrors] = useState<{ [key: string]: string | null }>(
+    {}
+  );
+  const [minArea, setMinArea] = useState(1000);
+  const [minScore, setMinScore] = useState(70);
+  const [filteredLocations, setFilteredLocations] = useState<Location[]>([]);
 
   // Memoize map center to prevent unnecessary rerenders
   const defaultCenter: [number, number] = useMemo(() => [20, 0], []);
@@ -90,17 +95,38 @@ export default function MapDashboard() {
       loadLocations(selectedState).finally(() => setLoading(false));
     } else {
       setLocations([]);
+      setFilteredLocations([]);
       setMapCenter(defaultCenter);
       setMapZoom(defaultZoom);
     }
   }, [selectedState, defaultCenter]);
+
+  // Apply filters to locations
+  useEffect(() => {
+    const topSitesData = locations.map((location) => ({
+      ...location,
+      name: `${location.name}, ${location.state}`,
+      score: location.score ?? Math.round(Math.random() * 20 + 80), // Use score from API or fallback to random
+      area: location.area ?? Math.round(Math.random() * 15000 + 5000), // Use area from API or fallback to random
+      coordinates: location.coordinates ?? {
+        lat: location.latitude ?? 0,
+        lng: location.longitude ?? 0,
+      },
+    }));
+
+    const filtered = topSitesData.filter((site) => {
+      return site.area >= minArea && site.score >= minScore;
+    });
+
+    setFilteredLocations(filtered);
+  }, [locations, minArea, minScore]);
 
   const loadStates = async () => {
     try {
       const statesData = await terraformAPI.getStates();
       setStates(statesData);
       // Clear any previous states error
-      setApiErrors((prev) => ({ ...prev, states: undefined }));
+      setApiErrors((prev) => ({ ...prev, states: null }));
     } catch (error) {
       console.error("Failed to load states:", error);
       setApiErrors((prev) => ({
@@ -118,7 +144,7 @@ export default function MapDashboard() {
       const locationsData = await terraformAPI.getLocations(state);
       setLocations(locationsData);
       // Clear any previous locations error
-      setApiErrors((prev) => ({ ...prev, locations: undefined }));
+      setApiErrors((prev) => ({ ...prev, locations: null }));
     } catch (error) {
       console.error("Failed to load locations:", error);
       setApiErrors((prev) => ({
@@ -129,11 +155,22 @@ export default function MapDashboard() {
       const sampleLocations: Location[] = Array(5)
         .fill(0)
         .map((_, i) => ({
-          id: i,
+          id: `${i}`,
           name: `Sample Location ${i + 1}`,
           latitude: 37 + Math.random() * 10 - 5,
           longitude: -120 + Math.random() * 10 - 5,
           state: state,
+          rainfall: 0,
+          soil_suitability: 0,
+          wildlife_potential: 0,
+          population: 0,
+          area: 0,
+          lack_of_tree_cover: 0,
+          coordinates: {
+            lat: 37 + Math.random() * 10 - 5,
+            lng: -120 + Math.random() * 10 - 5,
+          },
+          score: 0,
         }));
       setLocations(sampleLocations);
     } finally {
@@ -141,17 +178,8 @@ export default function MapDashboard() {
     }
   };
 
-  // Transform locations into top sites format
-  const topSites = locations.map((location) => ({
-    id: location.id.toString(),
-    name: `${location.name}, ${location.state}`,
-    score: Math.round(Math.random() * 20 + 80), // Temporary random score for demonstration
-    area: `${Math.round(Math.random() * 15000 + 5000)} hectares`, // Temporary random area
-    coordinates: {
-      lat: location.latitude,
-      lng: location.longitude,
-    },
-  }));
+  // Use filteredLocations for display
+  const topSites = filteredLocations;
 
   const getMarkerColor = (score: number): string => {
     if (score >= 90) return "emerald";
@@ -173,7 +201,7 @@ export default function MapDashboard() {
     setSelectedSite(siteId === selectedSite ? null : siteId);
 
     const site = topSites.find((s) => s.id === siteId);
-    if (site) {
+    if (site && site.coordinates) {
       setMapCenter([site.coordinates.lat, site.coordinates.lng]);
       setMapZoom(12);
 
@@ -183,7 +211,7 @@ export default function MapDashboard() {
           longitude: site.coordinates.lng,
         });
         // Clear any previous prediction error
-        setApiErrors((prev) => ({ ...prev, prediction: undefined }));
+        setApiErrors((prev) => ({ ...prev, prediction: null }));
         // You can use the prediction data to update the site details
         console.log("Prediction for site:", prediction);
       } catch (error) {
@@ -202,9 +230,24 @@ export default function MapDashboard() {
     // Here you could update map visualization based on the selected layer
   };
 
+  // Handle state selection
+  const handleStateChange = (value: string) => {
+    setSelectedState(value);
+    setSelectedSite(null);
+  };
+
+  // Handle filter changes
+  const handleAreaChange = (value: number[]) => {
+    setMinArea(value[0]);
+  };
+
+  const handleScoreChange = (value: number[]) => {
+    setMinScore(value[0]);
+  };
+
   const handleApplyFilters = () => {
     // Implement the filter application logic here
-    console.log("Filters applied");
+    console.log("Filters applied", { minArea, minScore });
 
     // Show feedback to user that filters were applied
     alert("Filters applied successfully!");
@@ -369,11 +412,12 @@ export default function MapDashboard() {
           <CardContent className="space-y-6">
             <div className="space-y-2">
               <label className="text-sm font-medium">State</label>
-              <Select value={selectedState} onValueChange={setSelectedState}>
+              <Select value={selectedState} onValueChange={handleStateChange}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select state" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="">All States</SelectItem>
                   {states.map((state) => (
                     <SelectItem key={state} value={state}>
                       {state}
@@ -405,7 +449,13 @@ export default function MapDashboard() {
               <label className="text-sm font-medium">
                 Minimum Area (hectares)
               </label>
-              <Slider defaultValue={[1000]} max={50000} step={500} />
+              <Slider
+                defaultValue={[minArea]}
+                value={[minArea]}
+                onValueChange={handleAreaChange}
+                max={50000}
+                step={500}
+              />
               <div className="flex justify-between text-xs text-gray-500">
                 <span>0</span>
                 <span>25,000</span>
@@ -417,7 +467,13 @@ export default function MapDashboard() {
               <label className="text-sm font-medium">
                 Minimum Suitability Score
               </label>
-              <Slider defaultValue={[70]} max={100} step={5} />
+              <Slider
+                defaultValue={[minScore]}
+                value={[minScore]}
+                onValueChange={handleScoreChange}
+                max={100}
+                step={5}
+              />
               <div className="flex justify-between text-xs text-gray-500">
                 <span>0</span>
                 <span>50</span>
@@ -475,28 +531,31 @@ export default function MapDashboard() {
                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
               />
               {!loading &&
-                topSites.map((site) => (
-                  <Marker
-                    key={site.id}
-                    position={[site.coordinates.lat, site.coordinates.lng]}
-                    icon={getMarkerIcon(site.score)}
-                    eventHandlers={{
-                      click: () => handleSiteSelect(site.id),
-                    }}
-                  >
-                    <Popup>
-                      <div className="p-2">
-                        <h3 className="font-medium">{site.name}</h3>
-                        <p className="text-sm text-gray-600">
-                          Score: {site.score}/100
-                        </p>
-                        <p className="text-sm text-gray-600">
-                          Area: {site.area}
-                        </p>
-                      </div>
-                    </Popup>
-                  </Marker>
-                ))}
+                topSites.map(
+                  (site) =>
+                    site.coordinates && (
+                      <Marker
+                        key={site.id}
+                        position={[site.coordinates.lat, site.coordinates.lng]}
+                        icon={getMarkerIcon(site.score || 0)}
+                        eventHandlers={{
+                          click: () => handleSiteSelect(site.id),
+                        }}
+                      >
+                        <Popup>
+                          <div className="p-2">
+                            <h3 className="font-medium">{site.name}</h3>
+                            <p className="text-sm text-gray-600">
+                              Score: {site.score}/100
+                            </p>
+                            <p className="text-sm text-gray-600">
+                              Area: {site.area} hectares
+                            </p>
+                          </div>
+                        </Popup>
+                      </Marker>
+                    )
+                )}
               {/* Layer controls based on activeLayer state */}
               {activeLayer === "environmental" && (
                 // Add environmental layer overlays here when data is available
@@ -570,70 +629,95 @@ export default function MapDashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {topSites.map((site) => (
-                <div
-                  key={site.id}
-                  className={`p-4 rounded-lg border ${
-                    selectedSite === site.id
-                      ? "border-emerald-500 bg-emerald-50"
-                      : "border-gray-200"
-                  } cursor-pointer`}
-                  onClick={() => handleSiteSelect(site.id)}
-                >
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <h3 className="font-medium">{site.name}</h3>
-                      <div className="flex items-center mt-1 space-x-3">
-                        <Badge
-                          variant="outline"
-                          className="bg-emerald-50 text-emerald-700 border-emerald-200"
-                        >
-                          Score: {site.score}/100
-                        </Badge>
-                        <span className="text-sm text-gray-500">
-                          {site.area}
-                        </span>
-                      </div>
-                    </div>
-                    <Button size="icon" variant="ghost" className="h-8 w-8">
-                      <Info className="h-4 w-4" />
-                    </Button>
-                  </div>
-
-                  {selectedSite === site.id && (
-                    <div className="mt-4 pt-4 border-t border-gray-200">
-                      <h4 className="text-sm font-medium mb-2">Site Details</h4>
-                      <div className="grid grid-cols-2 gap-2 text-sm">
-                        <div>
-                          <p className="text-gray-500">Climate:</p>
-                          <p>Tropical</p>
-                        </div>
-                        <div>
-                          <p className="text-gray-500">Annual Rainfall:</p>
-                          <p>2,500mm</p>
-                        </div>
-                        <div>
-                          <p className="text-gray-500">Soil Type:</p>
-                          <p>Loamy</p>
-                        </div>
-                        <div>
-                          <p className="text-gray-500">Biodiversity Impact:</p>
-                          <p>Very High</p>
+            {loading ? (
+              <div className="text-center py-8">
+                <p>Loading site data...</p>
+              </div>
+            ) : topSites.length === 0 ? (
+              <div className="text-center py-8">
+                <p>
+                  No sites found matching your criteria. Try adjusting your
+                  filters.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {topSites.map((site) => (
+                  <div
+                    key={site.id}
+                    className={`p-4 rounded-lg border ${
+                      selectedSite === site.id
+                        ? "border-emerald-500 bg-emerald-50"
+                        : "border-gray-200"
+                    } cursor-pointer`}
+                    onClick={() => handleSiteSelect(site.id)}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <h3 className="font-medium">{site.name}</h3>
+                        <div className="flex items-center mt-1 space-x-3">
+                          <Badge
+                            variant="outline"
+                            className="bg-emerald-50 text-emerald-700 border-emerald-200"
+                          >
+                            Score: {site.score || 0}/100
+                          </Badge>
+                          <span className="text-sm text-gray-500">
+                            {site.area || 0} hectares
+                          </span>
                         </div>
                       </div>
-                      <Button
-                        size="sm"
-                        className="mt-3 w-full bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white transition-all transform hover:-translate-y-0.5 active:translate-y-0 active:scale-98 duration-150 shadow-sm hover:shadow-md"
-                        onClick={() => handleViewDetailedReport(site.id)}
-                      >
-                        View Detailed Report
+                      <Button size="icon" variant="ghost" className="h-8 w-8">
+                        <Info className="h-4 w-4" />
                       </Button>
                     </div>
-                  )}
-                </div>
-              ))}
-            </div>
+
+                    {selectedSite === site.id && (
+                      <div className="mt-4 pt-4 border-t border-gray-200">
+                        <h4 className="text-sm font-medium mb-2">
+                          Site Details
+                        </h4>
+                        <div className="grid grid-cols-2 gap-2 text-sm">
+                          <div>
+                            <p className="text-gray-500">Climate:</p>
+                            <p>Tropical</p>
+                          </div>
+                          <div>
+                            <p className="text-gray-500">Annual Rainfall:</p>
+                            <p>{site.rainfall || 0}mm</p>
+                          </div>
+                          <div>
+                            <p className="text-gray-500">Soil Type:</p>
+                            <p>Loamy ({(site.soil_suitability || 0) * 100}%)</p>
+                          </div>
+                          <div>
+                            <p className="text-gray-500">
+                              Biodiversity Impact:
+                            </p>
+                            <p>
+                              {(site.wildlife_potential || 0) > 0.7
+                                ? "Very High"
+                                : (site.wildlife_potential || 0) > 0.5
+                                ? "High"
+                                : (site.wildlife_potential || 0) > 0.3
+                                ? "Medium"
+                                : "Low"}
+                            </p>
+                          </div>
+                        </div>
+                        <Button
+                          size="sm"
+                          className="mt-3 w-full bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white transition-all transform hover:-translate-y-0.5 active:translate-y-0 active:scale-98 duration-150 shadow-sm hover:shadow-md"
+                          onClick={() => handleViewDetailedReport(site.id)}
+                        >
+                          View Detailed Report
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

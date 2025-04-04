@@ -1,6 +1,14 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Menu, X, MapPin, BarChart2, Users, FileText } from "lucide-react";
+import {
+  Menu,
+  X,
+  MapPin,
+  BarChart2,
+  Users,
+  FileText,
+  Calculator,
+} from "lucide-react";
 import { Button } from "./ui/button";
 
 export default function Navbar() {
@@ -45,6 +53,12 @@ export default function Navbar() {
               className="text-gray-600 hover:text-emerald-600 font-medium transition-colors relative after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-emerald-600 after:scale-x-0 hover:after:scale-x-100 after:transition-transform after:duration-300"
             >
               Data Analysis
+            </Link>
+            <Link
+              to="/calculator"
+              className="text-gray-600 hover:text-emerald-600 font-medium transition-colors relative after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-emerald-600 after:scale-x-0 hover:after:scale-x-100 after:transition-transform after:duration-300"
+            >
+              Suitability Calculator
             </Link>
             <Link
               to="/sites"
@@ -114,6 +128,14 @@ export default function Navbar() {
             >
               <BarChart2 className="h-5 w-5 mr-3 text-emerald-600" />
               <span className="font-medium">Data Analysis</span>
+            </Link>
+            <Link
+              to="/calculator"
+              className="flex items-center p-3 rounded-lg hover:bg-emerald-50 active:bg-emerald-100 transition-colors"
+              onClick={() => setIsMenuOpen(false)}
+            >
+              <Calculator className="h-5 w-5 mr-3 text-emerald-600" />
+              <span className="font-medium">Suitability Calculator</span>
             </Link>
             <Link
               to="/sites"

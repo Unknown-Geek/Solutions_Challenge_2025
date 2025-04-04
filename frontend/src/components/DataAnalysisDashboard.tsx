@@ -28,8 +28,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "./ui/select";
-import terraformAPI from "../services/api";
-import { Location, PredictionResponse } from "../types/api";
+import terraformAPI, { Location } from "../services/api"; // Import Location from services/api instead
+import { PredictionResponse } from "../types/api"; // Still import PredictionResponse from types/api
 import { useNavigate } from "react-router-dom";
 
 export default function DataAnalysisDashboard() {
@@ -42,7 +42,9 @@ export default function DataAnalysisDashboard() {
   const [predictionResult, setPredictionResult] =
     useState<PredictionResponse | null>(null);
   const [loading, setLoading] = useState(false);
-  const [apiErrors, setApiErrors] = useState<{ [key: string]: string }>({});
+  const [apiErrors, setApiErrors] = useState<{ [key: string]: string | null }>(
+    {}
+  );
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -64,7 +66,7 @@ export default function DataAnalysisDashboard() {
       const statesData = await terraformAPI.getStates();
       setStates(statesData);
       // Clear any previous states error
-      setApiErrors((prev) => ({ ...prev, states: undefined }));
+      setApiErrors((prev) => ({ ...prev, states: null }));
     } catch (error) {
       console.error("Failed to load states:", error);
       setApiErrors((prev) => ({
@@ -81,7 +83,7 @@ export default function DataAnalysisDashboard() {
       const locationsData = await terraformAPI.getLocations(state);
       setLocations(locationsData);
       // Clear any previous locations error
-      setApiErrors((prev) => ({ ...prev, locations: undefined }));
+      setApiErrors((prev) => ({ ...prev, locations: null }));
     } catch (error) {
       console.error("Failed to load locations:", error);
       setApiErrors((prev) => ({
@@ -92,11 +94,17 @@ export default function DataAnalysisDashboard() {
       const sampleLocations: Location[] = Array(5)
         .fill(0)
         .map((_, i) => ({
-          id: i,
+          id: `${i}`, // Convert to string to match Location type from services/api
           name: `Sample Location ${i + 1}`,
           latitude: 37 + Math.random() * 10 - 5,
           longitude: -120 + Math.random() * 10 - 5,
           state: state,
+          rainfall: 0,
+          soil_suitability: 0,
+          wildlife_potential: 0,
+          population: 0,
+          area: 0,
+          lack_of_tree_cover: 0,
         }));
       setLocations(sampleLocations);
     }
@@ -114,7 +122,7 @@ export default function DataAnalysisDashboard() {
       });
       setPredictionResult(result);
       // Clear any previous prediction error
-      setApiErrors((prev) => ({ ...prev, prediction: undefined }));
+      setApiErrors((prev) => ({ ...prev, prediction: null }));
     } catch (error) {
       console.error("Prediction failed:", error);
       setApiErrors((prev) => ({
@@ -246,7 +254,9 @@ export default function DataAnalysisDashboard() {
 
   // Add error message banner at the top if there are any API errors
   const renderErrorBanner = () => {
-    const errorMessages = Object.values(apiErrors).filter(Boolean);
+    const errorMessages = Object.values(apiErrors).filter(
+      (message) => message !== null && message !== undefined
+    );
     if (errorMessages.length === 0) return null;
 
     return (

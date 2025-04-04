@@ -46,7 +46,7 @@ export default function AboutPage() {
                 <span>GitHub Repository</span>
               </a>
               <a
-                href="https://solutions-challenge-2025-seven.vercel.app"
+                href="https://drive.google.com/drive/folders/1QRdsxq642mSc6cnubDvMkRRlzdBLnh6y?usp=drive_link"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center text-white hover:text-emerald-100 transition-colors"
