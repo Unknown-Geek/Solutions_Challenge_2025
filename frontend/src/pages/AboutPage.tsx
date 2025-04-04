@@ -500,7 +500,7 @@ export default function AboutPage() {
       </section>
       */}
 
-      {/* Partners & Recognition */}
+      {/* Partners & Recognition 
       <section className="py-16 bg-gray-50">
         <div className="container mx-auto px-4">
           <h2 className="text-3xl font-bold mb-6 text-center">
@@ -542,6 +542,7 @@ export default function AboutPage() {
           </div>
         </div>
       </section>
+      */}
 
       {/* CTA */}
       <section className="py-16 bg-emerald-700 text-white">
