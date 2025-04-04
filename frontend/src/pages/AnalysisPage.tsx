@@ -3,7 +3,6 @@ import DataAnalysisDashboard from "../components/DataAnalysisDashboard";
 import terraformAPI from "../services/api";
 
 export default function AnalysisPage() {
-  const [isLoading, setIsLoading] = useState(false); // Changed to false to show content immediately
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
