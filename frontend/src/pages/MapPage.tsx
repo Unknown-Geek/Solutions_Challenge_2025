@@ -1,13 +1,26 @@
 import { useState, useEffect } from "react";
 import MapDashboard from "../components/MapDashboard";
 import terraformAPI from "../services/api";
+// Import Leaflet CSS at the page level to ensure it's loaded before the map
+import "leaflet/dist/leaflet.css";
 
 export default function MapPage() {
   const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [mapMounted, setMapMounted] = useState(false);
 
   useEffect(() => {
     // Check server health in background without blocking UI
     checkServerHealth();
+
+    // Add a longer delay to ensure the DOM is fully ready for the map
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+      // Set mapMounted after a brief additional delay to ensure proper initialization
+      setTimeout(() => setMapMounted(true), 100);
+    }, 300);
+
+    return () => clearTimeout(timer);
   }, []);
 
   const checkServerHealth = async () => {
@@ -68,7 +81,13 @@ export default function MapPage() {
             </div>
           )}
 
-          <MapDashboard />
+          {isLoading ? (
+            <div className="flex justify-center items-center h-[600px] bg-gray-50 rounded-lg">
+              <div className="text-gray-500">Loading map interface...</div>
+            </div>
+          ) : (
+            mapMounted && <MapDashboard />
+          )}
         </div>
       </div>
     </div>
