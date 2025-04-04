@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { MapPin, BarChart2, Layers, FileText, ArrowRight } from "lucide-react";
 import { Button } from "../components/ui/button";
 import {
