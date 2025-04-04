@@ -2,6 +2,18 @@
 module.exports = {
   darkMode: ["class"],
   content: ["./src/**/*.{js,jsx,ts,tsx}", "*.{js,ts,jsx,tsx,mdx}"],
+  safelist: [
+    "bg-emerald-500",
+    "bg-yellow-500",
+    "bg-orange-500",
+    "bg-red-500",
+    "w-6",
+    "h-6",
+    "rounded-full",
+    "border-2",
+    "border-white",
+    "shadow-lg",
+  ],
   theme: {
     container: {
       center: true,
@@ -68,5 +80,4 @@ module.exports = {
     },
   },
   plugins: [require("tailwindcss-animate")],
-}
-
+};
