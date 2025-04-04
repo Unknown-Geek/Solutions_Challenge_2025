@@ -5,7 +5,7 @@ import {
   Users,
   Building,
   Globe,
-  Award,
+  // Award,
   Github,
   ExternalLink,
   Code,
