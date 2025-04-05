@@ -31,8 +31,6 @@ TerraForm is a cutting-edge AI-powered platform that facilitates sustainable ref
 
 ## 🏗️ Project Architecture
 
-![Architecture Diagram](https://your-architecture-diagram-link.com)
-
 ### **Tech Stack**
 
 #### **Frontend:**
@@ -131,6 +129,3 @@ $ npm run dev
 
 ---
 
-## 📄 License
-
-MIT License. See [LICENSE](LICENSE) for details.
